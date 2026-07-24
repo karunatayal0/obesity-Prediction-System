@@ -4,7 +4,7 @@ import gradio as gr
 import pandas as pd
 
 # Load model
-model = joblib.load("obesity_prediction_model.pkl")
+model = joblib.load("obesity_model.pkl")
 
 # Mappings
 gender = {"Male": 0, "Female": 1}
