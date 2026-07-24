@@ -1,51 +1,98 @@
 import os
-import gradio as gr
 import joblib
 import pandas as pd
+import gradio as gr
 
-# Load trained model
+# Load model
 model = joblib.load("obesity_model.pkl")
 
+# Encoding dictionaries
+gender_map = {
+    "Male": "Male",
+    "Female": "Female"
+}
 
-def predict_obesity(gender, age, height, weight, family_history, faf, ch2o):
+yes_no = {
+    "Yes": "yes",
+    "No": "no"
+}
+
+calc_map = {
+    "Never": "no",
+    "Sometimes": "Sometimes",
+    "Frequently": "Frequently",
+    "Always": "Always"
+}
+
+transport_map = {
+    "Walking": "Walking",
+    "Bike": "Bike",
+    "Motorbike": "Motorbike",
+    "Public Transportation": "Public_Transportation",
+    "Automobile": "Automobile"
+}
+
+
+def predict(age, gender, height, weight, calc, favc,
+            fcvc, ncp, smoke, ch2o,
+            family_history, faf, tue, transport):
+
     try:
-        # Encode categorical values
-        gender = 1 if gender == "Male" else 0
-        family_history = 1 if family_history == "Yes" else 0
 
-        # Create dataframe (column names should match training data)
-        input_data = pd.DataFrame({
-            "Gender": [gender],
+        data = pd.DataFrame({
             "Age": [age],
+            "Gender": [gender_map[gender]],
             "Height": [height],
             "Weight": [weight],
-            "family_history_with_overweight": [family_history],
+            "CALC": [calc_map[calc]],
+            "FAVC": [yes_no[favc]],
+            "FCVC": [fcvc],
+            "NCP": [ncp],
+            "SMOKE": [yes_no[smoke]],
+            "CH2O": [ch2o],
+            "family_history_with_overweight": [yes_no[family_history]],
             "FAF": [faf],
-            "CH2O": [ch2o]
+            "TUE": [tue],
+            "MTRANS": [transport_map[transport]]
         })
 
-        prediction = model.predict(input_data)
+        prediction = model.predict(data)
 
-        return f"Predicted Obesity Level: {prediction[0]}"
+        return f"Predicted Obesity Class: {prediction[0]}"
 
     except Exception as e:
-        return f"Error: {e}"
+        return f"Error: {str(e)}"
 
 
 demo = gr.Interface(
-    fn=predict_obesity,
+    fn=predict,
     inputs=[
-        gr.Radio(["Male", "Female"], label="Gender"),
         gr.Number(label="Age"),
-        gr.Number(label="Height (meters)"),
+        gr.Radio(["Male", "Female"], label="Gender"),
+        gr.Number(label="Height (m)"),
         gr.Number(label="Weight (kg)"),
-        gr.Radio(["Yes", "No"], label="Family History of Obesity"),
-        gr.Slider(0, 5, step=1, label="Physical Activity Frequency (FAF)"),
-        gr.Slider(1, 3, step=0.5, label="Daily Water Intake (CH2O)")
+        gr.Dropdown(["Never", "Sometimes", "Frequently", "Always"], label="Alcohol Consumption"),
+        gr.Radio(["Yes", "No"], label="High Calorie Food"),
+        gr.Slider(1, 3, step=0.5, label="Vegetable Consumption (FCVC)"),
+        gr.Slider(1, 4, step=1, label="Main Meals (NCP)"),
+        gr.Radio(["Yes", "No"], label="Smoking"),
+        gr.Slider(1, 3, step=0.5, label="Water Intake (CH2O)"),
+        gr.Radio(["Yes", "No"], label="Family History"),
+        gr.Slider(0, 3, step=1, label="Physical Activity (FAF)"),
+        gr.Slider(0, 2, step=0.5, label="Technology Usage (TUE)"),
+        gr.Dropdown(
+            [
+                "Walking",
+                "Bike",
+                "Motorbike",
+                "Public Transportation",
+                "Automobile"
+            ],
+            label="Transportation"
+        )
     ],
     outputs=gr.Textbox(label="Prediction"),
-    title="Obesity Prediction System",
-    description="Enter the required details to predict obesity level."
+    title="Obesity Prediction System"
 )
 
 port = int(os.environ.get("PORT", 7860))
